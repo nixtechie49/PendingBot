@@ -1,1 +1,5 @@
 /target/
+/burst_db.lck
+/burst_db.log
+/burst_db.properties
+/burst_db.script
