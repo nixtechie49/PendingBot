@@ -25,7 +25,7 @@ public class Bot {
 		Database.init();
 		
 		JDABuilder builder = new JDABuilder(AccountType.BOT);
-		builder.setToken("Mzk4MTkzNDAyNjM5ODEwNTYy.DS6-pQ.VePCNDXuQi2AinSsySed5LzK-Yk");
+		builder.setToken("YOUR TOKEN HERE");
 		builder.setAutoReconnect(true);
 		builder.setStatus(OnlineStatus.ONLINE);
 		
