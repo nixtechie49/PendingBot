@@ -6,6 +6,8 @@ import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.util.ArrayList;
+import java.util.List;
 
 public class HttpGet {
 
@@ -18,39 +20,55 @@ public class HttpGet {
 	 */
 	public static String getPendingBurst(User user) {
 		if(user.getBurstAddress() != null) {
-			String url = "http://pool.burstcoin.ro/pending2.json";
-			URL obj;
-			try {
-				obj = new URL(url);		
-				HttpURLConnection con = (HttpURLConnection) obj.openConnection();
-				con.setRequestMethod("GET");
-				con.setRequestProperty("User-Agent", USER_AGENT);
-		
-				int responseCode = con.getResponseCode();
-				System.out.println("\nSending 'GET' request to URL : " + url);
-				System.out.println("Response Code : " + responseCode);
-		
-				BufferedReader in = new BufferedReader(new InputStreamReader(con.getInputStream()));
-				String inputLine;
-				StringBuffer response = new StringBuffer();
-				while ((inputLine = in.readLine()) != null) {
-					response.append(inputLine);
-				}
-				in.close();
-				String page = response.toString();
-				
-				String search = "\""+user.getBurstNumeric()+"\": ";
-				int s = page.indexOf(search);
-				int e = page.indexOf(",",s);
-				String numeric = page.substring(s+search.length(), e).trim();
-				return numeric;
-			} catch (MalformedURLException e1) {
-				// TODO Auto-generated catch block
-				e1.printStackTrace();
-			} catch (IOException e1) {
-				// TODO Auto-generated catch block
-				e1.printStackTrace();
+			String poolName = user.getPoolName();
+			String url = Database.executeUnique("TB_POOLS", "JSON", "POOLNAME", poolName);
+			if(url == null) {
+				return null;
 			}
+			
+			Long time = JsonCache.getInstace().getTime(poolName);
+			Long now = System.currentTimeMillis();
+			
+			List<String> lines = new ArrayList<String>();
+			if(time + (1000*60) < now || JsonCache.getInstace().getJson(poolName) == null) {
+				URL obj;
+				try {
+					obj = new URL(url);		
+					HttpURLConnection con = (HttpURLConnection) obj.openConnection();
+					con.setRequestMethod("GET");
+					con.setRequestProperty("User-Agent", USER_AGENT);
+			
+					int responseCode = con.getResponseCode();
+					System.out.println("\nSending 'GET' request to URL : " + url);
+					System.out.println("Response Code : " + responseCode);
+			
+					BufferedReader in = new BufferedReader(new InputStreamReader(con.getInputStream()));
+					String inputLine;
+					while ((inputLine = in.readLine()) != null) {
+						lines.add(inputLine);
+					}
+					in.close();	
+				} catch (MalformedURLException e1) {
+					e1.printStackTrace();
+				} catch (IOException e1) {
+					e1.printStackTrace();
+				}
+				
+				JsonCache.getInstace().putTime(poolName, System.currentTimeMillis());
+				JsonCache.getInstace().putJson(poolName, lines);
+			} else {
+				System.out.println("Loading Json for "+poolName+" from cache.");
+				lines = JsonCache.getInstace().getJson(poolName);
+			}
+			
+			for(String line : lines) {
+				line = line.replaceAll(" ", "");
+				line = line.replaceAll(",", "");
+				if(line.startsWith("\""+user.getBurstNumeric()+"\":")) {
+					return line.split(":")[1];
+				}
+			}
+			
 		}
 		return null;
 	}
